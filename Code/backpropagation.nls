@@ -1,0 +1,222 @@
+extensions [ table ]
+
+globals 
+[
+  global-table
+  
+  dataset
+  epoch-error
+  validation-error
+  test-error
+  stop-criteria-met
+]
+
+to get-dataset 
+  
+  ;; get data from somewhere (???)
+  set dataset ifelse-value ( data-source = "procedure" ) [ ask-procedure-name ] [ get-dataset-from-file ]
+  
+end
+
+to-report ask-procedure-name
+  
+  let procedure-name user-input "Enter procedure name "
+  
+  report runresult procedure-name
+  
+end
+
+to-report get-dataset-from-file
+
+  ;; TO DO: Implement
+  report ( list )
+
+end
+
+to begin-train
+  
+  let af ifelse-value ( activation-function = "hyperbolic-tangent" ) [ task hyperbolic-tangent-function ] [ task logistic-function ]
+  let daf ifelse-value ( activation-function = "hyperbolic-tangent" ) [ task hyperbolic-tangent-function-derivative ] [ task logistic-function-derivative ] 
+  
+  let cross-validation-datasets ( split-for-cross-validation dataset )
+  
+  let training-set item 0 cross-validation-datasets
+  let validation-set item 1 cross-validation-datasets
+  let test-set item 2 cross-validation-datasets
+  
+  train training-set af daf
+  
+  validate validation-set af
+  
+  test test-set af
+  
+  recolor
+  
+  tick
+  
+end
+
+to validate [ validation-set af ]
+  
+  foreach validation-set 
+  [
+    let input-data ( item 0 ? )
+    let out-data ( item 1 ? )
+    
+    activate-inputs input-data
+    
+    propagate af
+    
+    calc-output-nodes-error out-data
+  ]
+  
+  set validation-error sum [ err ^ 2 ] of output-nodes
+  
+end
+
+to test [ test-set af ]
+  
+  foreach test-set 
+  [
+    let input-data ( item 0 ? )
+    let out-data ( item 1 ? )
+    
+    activate-inputs input-data
+    
+    propagate af
+    
+    calc-output-nodes-error out-data
+  ]
+  
+  set test-error sum [ err ^ 2 ] of output-nodes
+  
+end
+
+to train [ training-set af daf ]
+  
+  set epoch-error -1
+  
+  foreach training-set 
+  [
+    ; pair of input-data and out-data is array
+    ; input-data -> array
+    ; out-data -> array
+    let input-data ( item 0 ? )
+    let out-data ( item 1 ? )
+    
+    activate-inputs input-data
+    
+    propagate af
+    
+    calc-output-nodes-error out-data
+    
+    back-propagate daf
+  ]
+  
+  set epoch-error sum [ err ^ 2 ] of output-nodes
+  
+;  let randomized-dataset ( shuffle dataset ) ;; ( ifelse-value ( is-list? dataset ) [ dataset ] [ table:to-list dataset ] ) )
+;  
+;  let epoch-dataset ( sublist randomized-dataset 0 num-examples-predefined ) ;num-examples-per-epoch )
+;  
+;  foreach epoch-dataset
+;  [
+;    ; pair of input-data and out-data is array
+;    ; input-data -> array
+;    ; out-data -> array
+;    let input-data ( item 0 ? )
+;    let out-data ( item 1 ? )
+;    
+;    activate-inputs input-data
+;    
+;    propagate af
+;    
+;    calc-output-nodes-error out-data
+;    
+;    back-propagate daf
+;  ]
+;  
+;  set epoch-error sum [ err ^ 2 ] of output-nodes
+;  
+;  tick
+  
+end
+
+to activate-inputs [ input-data ]
+  
+  let i 0
+  
+  foreach sort-on [ who ] input-nodes
+  [
+    ask ? 
+    [
+      set activation ( item i input-data )
+    ]
+    
+    set i i + 1 
+  ] 
+  
+end
+
+to propagate [ af ]
+  
+  foreach ( n-values num-hidden-layers [?] )
+  [
+    ask hidden-nodes with [ layer = ? ]
+    [
+      set activation (runresult af induced-local-field)
+    ]
+  ]
+  
+  ask output-nodes 
+  [
+    set activation (runresult af induced-local-field)
+  ]
+  
+end
+
+to-report induced-local-field
+  
+  report sum [ [ activation ] of end1 * weight ] of my-in-links
+  
+end
+
+
+to calc-output-nodes-error [ expected-out ] 
+  
+  let i 0
+  
+  foreach sort-on [ who ] output-nodes 
+  [
+    ask ? 
+    [
+      set err ( item i expected-out ) - activation
+    ]
+    
+    set i ( i + 1 )
+  ]
+  
+end
+
+to back-propagate [ daf ]
+  
+  ask output-nodes 
+  [
+    set local-gradient err * ( runresult daf activation )
+  ]
+  
+  foreach ( reverse n-values num-hidden-layers [?] )
+  [
+    ask hidden-nodes with [ layer = ? ]
+    [
+      set local-gradient ( runresult daf activation ) * sum [weight * [local-gradient] of end2] of my-out-links
+    ]
+  ]
+  
+  ask links with [ link-type = connection-link-type ]
+  [
+    set velocity momentum * velocity + learning-rate * [ activation ] of end1 * [ local-gradient ] of end2
+    set weight weight + velocity
+  ]
+  
+end
