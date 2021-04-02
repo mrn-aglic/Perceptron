@@ -1,6 +1,15 @@
 __includes [
   "Code/utils.nls"
-  ;"Code/nn_positionNodes.nls"
+  "Code/learningutils.nls"
+  "Code/cross_validation.nls"
+  "Code/perceptron-learning.nls"
+  "Plotting/plotting.nls"
+  "Testing/perceptron-testing.nls"
+]
+
+globals
+[
+  dataset
 ]
 
 links-own
@@ -18,16 +27,117 @@ bias-nodes-own
 ]
 
 input-nodes-own [ activation ]
-output-nodes-own [ err ]
+output-nodes-own [ activation err correct ]
+
+to setup
+
+  ca
+  reset-ticks
+
+  ask patches [ set pcolor 9.9 ]
+
+  set-default-shape bias-nodes "bias-node"
+  set-default-shape input-nodes "circle"
+  set-default-shape output-nodes "output-node"
+  set-default-shape links "small-arrow-shape"
+
+  create-nodes
+
+end
+
+to create-nodes
+
+  let num_xcor count patches with [ pycor = min-pycor ]
+  let x min-pxcor + ( max-pxcor / 2 )
+
+  let v floor ( num_xcor / ( num-input-nodes + 1 ) )
+  let y floor ( max-pycor - ( v / 2 ) )
+
+  setup-bias-nodes y
+  setup-input-nodes x ( y - v ) v
+  setup-output-nodes
+
+  setup-connections
+
+  if show-weights?
+  [
+    ask links
+    [
+      set label weight
+      set label-color black
+    ]
+  ]
+
+end
+
+to setup-connections
+
+  ask ( turtle-set input-nodes bias-nodes )
+  [
+    create-links-to output-nodes
+    [
+      set color blue
+      set weight ifelse-value ( w-random = "none" ) [ 0 ] [ get-random-value ]
+      set shape "small-arrow-shape"
+    ]
+  ]
+
+end
+
+to-report get-random-value
+
+  report runresult ( word w-random " " wrandom-mean " - " (wrandom-mean / 2) " " ifelse-value ( w-random = "random-normal" ) [ ( word std-deviation ) ] [ "" ] )
+
+end
+
+to setup-bias-nodes [ y ]
+
+  create-bias-nodes 1
+  [
+    set activation 1
+    set color yellow
+    set xcor min-pxcor + ( max-pxcor / 2 )
+    set ycor y
+  ]
+
+end
+
+to setup-input-nodes [ x y v ]
+
+  create-input-nodes num-input-nodes [ set color green ]
+
+  foreach sort-on [ who ] input-nodes
+  [
+    ask ?
+    [
+      setxy x y
+
+      set y y - v
+    ]
+  ]
+
+end
+
+to setup-output-nodes
+
+  create-output-nodes 1
+  [
+    set correct false
+    set color red
+    set ycor 0
+    set xcor floor ( max-pxcor / 2 )
+  ]
+
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
-600
-12
-1039
-472
-16
-16
-13.0
+617
+14
+1243
+661
+20
+20
+15.0244
 1
 10
 1
@@ -37,10 +147,10 @@ GRAPHICS-WINDOW
 1
 1
 1
--16
-16
--16
-16
+-20
+20
+-20
+20
 0
 0
 1
@@ -48,30 +158,297 @@ ticks
 30.0
 
 SWITCH
-62
-39
-233
-72
+13
+132
+184
+165
 show-weights?
 show-weights?
-1
+0
 1
 -1000
 
 SLIDER
-240
-38
-590
-71
+191
+131
+605
+164
 num-input-nodes
 num-input-nodes
 1
 100
-3
+2
 1
 1
 NIL
 HORIZONTAL
+
+BUTTON
+9
+20
+75
+53
+setup
+setup
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+CHOOSER
+8
+187
+185
+232
+w-random
+w-random
+"none" "random-float" "random-normal" "random-poisson" "random-exponential"
+1
+
+SLIDER
+192
+188
+364
+221
+wrandom-mean
+wrandom-mean
+0.1
+1
+0.2
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+373
+187
+545
+220
+std-deviation
+std-deviation
+0.1
+0.5
+0.1
+0.1
+1
+NIL
+HORIZONTAL
+
+CHOOSER
+42
+244
+180
+289
+target-function
+target-function
+"and" "or" "nand" "nor" "xor"
+0
+
+SLIDER
+372
+299
+544
+332
+logistic-param-a
+logistic-param-a
+1
+25
+1
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+371
+339
+543
+372
+ahyper-const
+ahyper-const
+0.1
+4
+4
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+370
+381
+542
+414
+bhyper-const
+bhyper-const
+0.1
+4
+2
+0.1
+1
+NIL
+HORIZONTAL
+
+CHOOSER
+372
+245
+599
+290
+activation-function
+activation-function
+"sign" "identity" "softsign-function" "logistic-function" "hyperbolic-tangent-function"
+0
+
+SLIDER
+15
+80
+425
+113
+learning-rate
+learning-rate
+0.0
+1.0
+0.0051
+1.0e-04
+1
+NIL
+HORIZONTAL
+
+PLOT
+11
+303
+351
+482
+Error vs. Epochs
+NIL
+NIL
+0.0
+10.0
+0.0
+1.0
+true
+true
+"" ""
+PENS
+"test-error" 1.0 0 -2674135 true "" "plot test-error"
+"validation-error" 1.0 0 -13840069 true "" "plot validation-error"
+"epoch-error" 1.0 0 -11221820 true "" "plot epoch-error"
+
+CHOOSER
+219
+500
+357
+545
+input-1
+input-1
+-1 1
+1
+
+CHOOSER
+217
+553
+355
+598
+input-2
+input-2
+-1 1
+1
+
+PLOT
+-11
+491
+189
+641
+Rule Learned
+x1
+x2
+-2.0
+2.0
+-2.0
+2.0
+false
+false
+"" ""
+PENS
+"rule" 1.0 0 -16777216 true "" ""
+"negatives" 1.0 2 -2674135 true "" ""
+"positives" 1.0 2 -13840069 true "" ""
+
+BUTTON
+190
+21
+254
+54
+Train
+begin-train
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+83
+21
+175
+54
+Load data
+load-data
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+CHOOSER
+434
+80
+600
+125
+get-data-function
+get-data-function
+"generate-test-data"
+0
+
+SLIDER
+380
+27
+595
+60
+num-test-data-elements
+num-test-data-elements
+1
+1000
+101
+1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+370
+445
+473
+478
+delay?
+delay?
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -124,6 +501,13 @@ arrow
 true
 0
 Polygon -7500403 true true 150 0 0 150 105 150 105 293 195 293 195 150 300 150
+
+bias-node
+false
+0
+Circle -16777216 true false 0 0 300
+Circle -7500403 true true 30 30 240
+Polygon -16777216 true false 120 60 150 60 165 60 165 225 180 225 180 240 135 240 135 225 150 225 150 75 135 75 150 60
 
 box
 false
@@ -275,6 +659,13 @@ line half
 true
 0
 Line -7500403 true 150 0 150 150
+
+output-node
+false
+1
+Circle -7500403 true false 0 0 300
+Circle -2674135 true true 30 30 240
+Polygon -7500403 true false 195 75 90 75 150 150 90 225 195 225 195 210 195 195 180 210 120 210 165 150 120 90 180 90 195 105 195 75
 
 pentagon
 false
@@ -432,6 +823,17 @@ true
 0
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
+
+small-arrow-shape
+0.0
+-0.2 0 0.0 1.0
+0.0 1 1.0 0.0
+0.2 0 0.0 1.0
+link direction
+true
+0
+Line -7500403 true 150 150 135 180
+Line -7500403 true 150 150 165 180
 
 @#$#@#$#@
 0

@@ -1,0 +1,198 @@
+globals
+[
+  example-error
+  validation-example-error
+  test-example-error
+  
+  epoch-error
+  validation-error
+  test-error
+]
+
+to load-data
+  
+  ; TO DO: get data from file
+  
+  if ( get-data-function = "generate-test-data")
+  [ generate-test-data ]
+  
+end
+
+to-report get-activation-function 
+
+  let threshold 0
+
+  report ifelse-value ( activation-function = "sign" ) 
+  [
+    task [ sign ? threshold ]
+  ]
+  [
+    ifelse-value ( activation-function = "identity" )
+    [ task identity ]
+    [
+      ifelse-value ( activation-function = "softsing-function" )
+      [
+        task softsign-function
+      ]
+      [
+        ifelse-value ( activation-function = "logistic-function" )
+        [
+          task logistic-function
+        ]
+        [
+          task hyperbolic-tangent-function
+        ]
+      ]
+    ]
+  ]
+
+end
+
+to begin-train
+  
+  if delay? 
+  [ wait 0.5 ]
+  
+  let af get-activation-function
+  
+  load-data
+  
+  let cross-validation-datasets ( split-for-cross-validation dataset )
+  
+  let training-set item 0 cross-validation-datasets
+  let validation-set item 1 cross-validation-datasets
+  let test-set item 2 cross-validation-datasets
+  
+  train training-set af
+  
+  validate validation-set af
+  
+  test test-set af
+  
+  recolor
+  
+  tick
+  
+  plot-learned-line
+  
+  plot-sets-errors
+  
+end
+
+to train [ training-set af ]
+  
+  foreach training-set
+  [
+    let input-data ( item 0 ? )
+    let out-data ( item 1 ? )
+    
+    activate-inputs input-data
+    
+    compute-activation af
+    
+    calculate-error out-data
+    
+    update-weights 
+  
+  ]
+  
+  set epoch-error ( sum [ err ^ 2 ] of output-nodes ) / ( 2 * length training-set )
+  
+end
+
+to activate-inputs [ input-data ]
+  
+  let i 0
+  
+  foreach sort-on [who] input-nodes
+  [
+    let in item i input-data
+    
+    ask ? 
+    [
+      set activation in
+    ]
+    
+    set i ( i + 1 )
+  ]
+  
+end
+
+to compute-activation [ af ]
+  
+  ask output-nodes
+  [
+    set activation ( run-result af induced-local-field )
+  ]
+  
+end
+
+to calculate-error [ out-data ]
+  
+  let i 0
+  
+  foreach sort-on [ who ] output-nodes 
+  [
+    let target ( item i out-data )
+    
+    ask ? 
+    [
+      set err ( target - activation )
+    ]
+    
+    set i ( i + 1 ) 
+  ]
+  
+end
+
+to update-weights
+  
+  ask links 
+  [
+    let impuls [ activation ] of end1
+    let perceptron-err [ err ] of end2
+    
+    set weight weight + learning-rate * perceptron-err * impuls
+  ]
+  
+end
+
+to-report induced-local-field
+  
+  report sum [ weight * [ activation ] of end1 ] of my-in-links
+  
+end
+
+to validate [ validation-set af ]
+  
+  foreach validation-set 
+  [
+    let input-data ( item 0 ? )
+    let out-data ( item 1 ? )
+    
+    activate-inputs input-data
+    
+    compute-activation af
+  ]
+  
+  if length validation-set > 0
+  [ set validation-error ( sum [ err ^ 2 ] of output-nodes ) / ( 2 * length validation-set ) ]
+  
+end
+
+to test [ test-set af ]
+  
+  foreach test-set 
+  [
+    let input-data ( item 0 ? )
+    let out-data ( item 1 ? )
+    
+    activate-inputs input-data
+    
+    compute-activation af  
+  ]
+  
+  if length test-set > 0
+  [ set test-error ( sum [ err ^ 2 ] of output-nodes ) / ( 2 * length test-set ) ]
+  
+end

@@ -1,0 +1,69 @@
+globals 
+[
+  test-test-set
+  test-training-set
+  test-validation-set
+]
+
+to generate-test-data
+  
+  let x num-test-data-elements 
+  
+  set dataset generate-dataset x
+  
+  let cross-validation-datasets ( split-for-cross-validation dataset )
+  
+  set test-training-set item 0 cross-validation-datasets
+  set test-validation-set item 1 cross-validation-datasets
+  set test-test-set item 2 cross-validation-datasets
+  
+end
+
+to-report generate-dataset [ n ]
+  
+  report n-values n [ generate-random-pair ]
+  
+end
+
+to-report generate-random-pair
+  
+  let a ifelse-value ( random 2 = 0 ) [ -1 ] [ 1 ]
+  let b ifelse-value ( random 2 = 0 ) [ -1 ] [ 1 ]  
+  
+  let logical-result run-result ( word "my-" target-function " ( a = 1 ) " " ( b = 1 ) " )
+  
+  let c ifelse-value ( logical-result ) [ 1 ] [ -1 ]
+  
+  report ( list ( list a b ) ( list c ) )
+   
+end
+
+to-report my-and [ a b ]
+  
+  report a and b
+  
+end
+
+to-report my-or [ a b ]
+  
+  report a or b
+  
+end
+
+to-report my-nand [ a b ]
+  
+  report not ( a and b )
+  
+end
+
+to-report my-nor [ a b ]
+  
+  report not ( a or b )
+  
+end
+
+to-report my-xor [ a b ]
+  
+  report a xor b
+  
+end

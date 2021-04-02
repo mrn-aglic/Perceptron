@@ -21,12 +21,24 @@ to recolor
     set thickness 0.05 * abs weight
     
     ifelse show-weights? 
-    [ set label precision weight 4 ]
+    [ set label precision weight 12 ]
     [ set label "" ]
     
     ifelse weight > 0
     [ set color [ 84 196 196 196 ] ]
     [ set color [ 124 80 164 196 ] ]
   ]
+  
+end
+
+to-report nand [ a b ]
+  
+  report not ( a and b )
+  
+end
+
+to-report nor [ a b ]
+  
+  report not ( a or b )
   
 end

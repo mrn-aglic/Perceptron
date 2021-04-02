@@ -1,0 +1,112 @@
+to plot-learned-line
+  
+  set-current-plot "Rule Learned"
+  clear-plot
+  
+  run ( word "plot-" target-function )
+  
+  let x1 -2 
+  
+  let edge1 [ out-link-to one-of output-nodes ] of min-one-of input-nodes [ who ]
+  let edge2 [ out-link-to one-of output-nodes ] of max-one-of input-nodes [ who ]
+  
+  foreach n-values 5 [ ? - 2 ]
+  [
+    let perceptron one-of output-nodes
+    
+    let w0 sum [ [ weight ] of out-link-to perceptron ] of bias-nodes
+    
+    let x2 ( ( - w0 - [ weight ] of edge1 * ? ) / [ weight ] of edge2 )
+    
+    set-current-plot-pen "rule"
+    plotxy ? x2
+  ]
+  
+end
+
+to plot-or
+  
+  set-current-plot-pen "positives"
+  plotxy -1 1
+  plotxy 1 1
+  plotxy 1 -1
+  set-current-plot-pen "negatives"
+  plotxy -1 -1
+  
+end
+
+to plot-xor
+  
+  set-current-plot-pen "positives"
+  plotxy -1 1
+  plotxy 1 -1
+  set-current-plot-pen "negatives"
+  plotxy 1 1
+  plotxy -1 -1
+  
+end
+
+to plot-and
+  
+  set-current-plot-pen "positives"
+  plotxy 1 1
+  set-current-plot-pen "negatives"
+  plotxy 1 -1
+  plotxy -1 1
+  plotxy -1 -1
+  
+end
+
+to plot-nor
+  
+  set-current-plot-pen "positives"
+  plotxy -1 -1
+  set-current-plot-pen "negatives"
+  plotxy 1 1
+  plotxy 1 -1
+  plotxy -1 1
+  
+end
+
+to plot-nand
+  
+  set-current-plot-pen "positives"
+  plotxy -1 -1
+  plotxy 1 -1
+  plotxy -1 1
+  set-current-plot-pen "negatives"
+  plotxy 1 1
+  
+end
+
+to plot-sets-errors
+  
+  plot-error
+  plot-validation
+  plot-test
+  
+end
+
+to plot-error
+  
+  set-current-plot "Error vs. Epochs"
+  
+  plotxy ticks epoch-error
+  
+end
+
+to plot-validation
+  
+  set-current-plot "Error vs. Epochs"
+  
+  plotxy ticks validation-error
+  
+end
+
+to plot-test
+  
+  set-current-plot "Error vs. Epochs"
+  
+  plotxy ticks test-error
+  
+end
